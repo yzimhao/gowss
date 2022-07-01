@@ -6,6 +6,7 @@ package gowss
 
 import (
 	"log"
+	"net/http"
 )
 
 // Hub maintains the set of active clients and broadcasts messages to the
@@ -26,13 +27,7 @@ type Hub struct {
 	unregister chan *Client
 }
 
-var MainHub *Hub
-
 func NewHub() *Hub {
-	if MainHub != nil {
-		return MainHub
-	}
-
 	h := Hub{
 		Broadcast:  make(chan MsgBody),
 		recv:       make(chan []byte),
@@ -40,9 +35,9 @@ func NewHub() *Hub {
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
 	}
-	MainHub = &h
+
 	go h.run()
-	return MainHub
+	return &h
 }
 
 func (h *Hub) run() {
@@ -88,4 +83,24 @@ func (h *Hub) run() {
 
 		}
 	}
+}
+
+// serveWs handles websocket requests from the peer.
+func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	client := &Client{hub: h, conn: conn, send: make(chan []byte, 256)}
+
+	//注册
+	client.hub.register <- client
+	client.lastSendMsgHash = make(map[string]string)
+
+	// Allow collection of memory referenced by the caller by doing all work in
+	// new goroutines.
+	go client.writePump()
+	go client.readPump()
 }

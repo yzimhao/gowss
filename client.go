@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -126,26 +125,6 @@ func (c *Client) writePump() {
 			}
 		}
 	}
-}
-
-// serveWs handles websocket requests from the peer.
-func ServeWs(w http.ResponseWriter, r *http.Request) {
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	client := &Client{hub: MainHub, conn: conn, send: make(chan []byte, 256)}
-
-	//注册
-	client.hub.register <- client
-	client.lastSendMsgHash = make(map[string]string)
-
-	// Allow collection of memory referenced by the caller by doing all work in
-	// new goroutines.
-	go client.writePump()
-	go client.readPump()
 }
 
 func (c *Client) handleRecvData(body []byte) {

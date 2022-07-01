@@ -12,11 +12,13 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+var _socket *Hub
+
 func init() {
 	go func() {
-		NewHub()
+		_socket = NewHub()
 		http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-			ServeWs(w, r)
+			_socket.ServeWs(w, r)
 		})
 		err := http.ListenAndServe(":8090", nil)
 		if err != nil {
@@ -26,7 +28,7 @@ func init() {
 }
 
 func newClient() *websocket.Conn {
-	s := httptest.NewServer(http.HandlerFunc(ServeWs))
+	s := httptest.NewServer(http.HandlerFunc(_socket.ServeWs))
 	defer s.Close()
 
 	// Convert http://127.0.0.1 to ws://127.0.0.
@@ -45,16 +47,14 @@ func TestClient(t *testing.T) {
 
 	Convey("hello testing", t, func() {
 		ws := newClient()
-		defer ws.Close()
-		// Send message to server, read response and check to see if it's what we expect.
-
 		err := ws.WriteMessage(websocket.TextMessage, []byte("hello"))
 		So(err, ShouldBeNil)
 
-		So(len(MainHub.clients), ShouldEqual, 1)
+		time.Sleep(time.Second * time.Duration(1))
+		So(len(_socket.clients), ShouldEqual, 1)
 		ws.Close()
 		time.Sleep(time.Second * time.Duration(2))
-		So(len(MainHub.clients), ShouldEqual, 0)
+		So(len(_socket.clients), ShouldEqual, 0)
 	})
 
 	Convey("客户端注册属性添加", t, func() {
@@ -68,8 +68,8 @@ func TestClient(t *testing.T) {
 		}
 
 		time.Sleep(time.Second * time.Duration(1))
-		So(len(MainHub.clients), ShouldEqual, 1)
-		for c, _ := range MainHub.clients {
+		So(len(_socket.clients), ShouldEqual, 1)
+		for c, _ := range _socket.clients {
 			So(c.attrs, ShouldContainKey, "kline.m1.demo")
 			So(c.attrs, ShouldContainKey, "latest.price.demo")
 		}
@@ -86,51 +86,27 @@ func TestClient(t *testing.T) {
 		}
 
 		send := MsgBody{
-			To:   "kline.m1.demo",
-			Body: []byte("hello"),
+			To: "kline.m1.demo",
+			Body: []string{
+				"a", "b",
+			},
 		}
 
-		MainHub.Broadcast <- send
+		_socket.Broadcast <- send
 		_, recv, _ := ws.ReadMessage()
 
 		time.Sleep(time.Second * time.Duration(1))
 
-		So(len(MainHub.clients), ShouldEqual, 1)
+		So(len(_socket.clients), ShouldEqual, 1)
 		t.Logf("%s", recv)
-		So(string(recv), ShouldEqualJSON, `{"type":"kline.m1.demo","body":"hello"}`)
+		So(string(recv), ShouldEqualJSON, `{"type":"kline.m1.demo","body":["a","b"]}`)
 
-		for c, _ := range MainHub.clients {
-			So(c.lastSendMsgHash["kline.m1.demo"], ShouldEqual, "5d41402abc4b2a76b9719d911017c592")
+		for c, _ := range _socket.clients {
+			So(c.lastSendMsgHash["kline.m1.demo"], ShouldEqual, "f2534fe3f8a3ffd8243077e8d354eb17")
 		}
 	})
 
 	Convey("同一类型的消息重复发送去重", t, func() {
-		// ws := newClient()
-		// defer ws.Close()
 
-		// subM := `{"attrs":["kline.m1.demo", "latest.price.demo"]}`
-		// t.Log(subM)
-		// if err := ws.WriteMessage(websocket.TextMessage, []byte(subM)); err != nil {
-		// 	t.Fatalf("%v", err)
-		// }
-
-		// send := MsgBody{
-		// 	To:   "kline.m1.demo",
-		// 	Body: []byte("hello"),
-		// }
-
-		// MainHub.Broadcast <- send
-		// MainHub.Broadcast <- send
-
-		// _, recv, _ := ws.ReadMessage()
-
-		// time.Sleep(time.Second * time.Duration(1))
-
-		// So(len(MainHub.clients), ShouldEqual, 1)
-		// So(string(recv), ShouldEqual, "hello")
-
-		// for c, _ := range MainHub.clients {
-		// 	So(c.lastSendMsgHash["kline.m1.demo"], ShouldEqual, "5d41402abc4b2a76b9719d911017c592")
-		// }
 	})
 }
