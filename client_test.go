@@ -61,7 +61,7 @@ func TestClient(t *testing.T) {
 		ws := newClient()
 		defer ws.Close()
 
-		subM := `{"attrs":["kline.m1.demo", "latest.price.demo"]}`
+		subM := `{"sub":["kline.m1.demo", "latest.price.demo"]}`
 		t.Log(subM)
 		if err := ws.WriteMessage(websocket.TextMessage, []byte(subM)); err != nil {
 			t.Fatalf("%v", err)
@@ -79,7 +79,7 @@ func TestClient(t *testing.T) {
 		ws := newClient()
 		defer ws.Close()
 
-		subM := `{"attrs":["kline.m1.demo", "latest.price.demo"]}`
+		subM := `{"sub":["kline.m1.demo", "latest.price.demo"]}`
 		t.Log(subM)
 		if err := ws.WriteMessage(websocket.TextMessage, []byte(subM)); err != nil {
 			t.Fatalf("%v", err)

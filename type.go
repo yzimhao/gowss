@@ -8,7 +8,7 @@ import (
 )
 
 type subMessage struct {
-	Attrs []string `json:"attrs"`
+	Sub []string `json:"sub"`
 }
 
 type MsgBody struct {
