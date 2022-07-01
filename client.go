@@ -130,7 +130,6 @@ func (c *Client) writePump() {
 func (c *Client) handleRecvData(body []byte) {
 	var msg subMessage
 	err := json.Unmarshal(body, &msg)
-	log.Printf("%+v, %s", msg, err)
 	if err != nil {
 		return
 	}
@@ -139,7 +138,7 @@ func (c *Client) handleRecvData(body []byte) {
 	for _, attr := range msg.Sub {
 		c.attrs[attr] = true
 	}
-	//特殊的属性，像用户id之类的处理
+	//todo 特殊的属性，像用户id之类的处理
 }
 
 func (c *Client) hasAttr(tag string) bool {

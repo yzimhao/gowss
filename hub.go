@@ -56,7 +56,7 @@ func (h *Hub) run() {
 
 		case message := <-h.Broadcast:
 			go func() {
-				log.Printf("broadcast: %+v", message)
+				// log.Printf("broadcast: %+v", message)
 				for client := range h.clients {
 					//广播消息之前，检查client是否拥有对应属性
 					if !client.hasAttr(message.To) {
@@ -67,7 +67,6 @@ func (h *Hub) run() {
 					newHash := message.BodyHash()
 					if lastHash, ok := client.lastSendMsgHash[message.To]; ok {
 						if newHash == lastHash {
-							log.Println("消息重复跳过")
 							return
 						}
 					}
