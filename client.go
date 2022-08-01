@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -52,6 +53,8 @@ type Client struct {
 
 	//服务端推送消息的hash，用来去重,每一种消息类型单独去重
 	lastSendMsgHash map[string]string
+
+	sync.Mutex
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -128,6 +131,9 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) handleRecvData(body []byte) {
+	c.Lock()
+	defer c.Unlock()
+
 	var msg subMessage
 	err := json.Unmarshal(body, &msg)
 	if err != nil {
@@ -135,6 +141,7 @@ func (c *Client) handleRecvData(body []byte) {
 	}
 
 	c.attrs = make(map[string]bool)
+
 	for _, attr := range msg.Sub {
 		c.attrs[attr] = true
 	}
@@ -142,8 +149,12 @@ func (c *Client) handleRecvData(body []byte) {
 }
 
 func (c *Client) hasAttr(tag string) bool {
+	c.Lock()
+	defer c.Unlock()
+
 	if _, ok := c.attrs[tag]; ok {
 		return true
 	}
+
 	return false
 }

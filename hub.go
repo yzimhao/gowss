@@ -60,14 +60,14 @@ func (h *Hub) run() {
 				for client := range h.clients {
 					//广播消息之前，检查client是否拥有对应属性
 					if !client.hasAttr(message.To) {
-						return
+						continue
 					}
 
 					//去重相同两条连续的重复消息
 					newHash := message.BodyHash()
 					if lastHash, ok := client.lastSendMsgHash[message.To]; ok {
 						if newHash == lastHash {
-							return
+							continue
 						}
 					}
 
